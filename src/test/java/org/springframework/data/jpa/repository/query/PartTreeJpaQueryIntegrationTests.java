@@ -23,6 +23,7 @@ import static org.springframework.test.util.ReflectionTestUtils.*;
 
 import java.lang.reflect.Method;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
@@ -32,6 +33,7 @@ import javax.persistence.PersistenceContext;
 import javax.persistence.Query;
 import javax.persistence.TemporalType;
 
+import org.assertj.core.api.Assertions;
 import org.hibernate.Version;
 import org.junit.Before;
 import org.junit.Rule;
@@ -58,6 +60,7 @@ import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
  * @author Oliver Gierke
  * @author Mark Paluch
  * @author Michael Cramer
+ * @author Jens Schauder
  */
 @RunWith(SpringJUnit4ClassRunner.class)
 @ContextConfiguration("classpath:infrastructure.xml")
@@ -168,6 +171,32 @@ public class PartTreeJpaQueryIntegrationTests {
 		jpaQuery.createQuery(new Object[] { "Oliver" });
 	}
 
+	@Test // DATAJPA-1182
+	public void rejectsInPredicateWithNonIterableParameter() throws Exception {
+
+		JpaQueryMethod method = getQueryMethod("findByIdIn", Long.class);
+
+		Assertions.assertThatIllegalStateException() //
+				.isThrownBy(() -> new PartTreeJpaQuery(method, entityManager, provider)) //
+				.withMessageContaining("findByIdIn") //
+				.withMessageContaining(" IN ") //
+				.withMessageContaining("Collection") //
+				.withMessageContaining("Long");
+	}
+
+	@Test // DATAJPA-1182
+	public void rejectsOtherThanInPredicateWithIterableParameter() throws Exception {
+
+		JpaQueryMethod method = getQueryMethod("findById", Collection.class);
+
+		Assertions.assertThatIllegalStateException() //
+				.isThrownBy(() -> new PartTreeJpaQuery(method, entityManager, provider)) //
+				.withMessageContaining("findById") //
+				.withMessageContaining(" SIMPLE_PROPERTY ") //
+				.withMessageContaining(" scalar ") //
+				.withMessageContaining("Collection");
+	}
+
 	private void testIgnoreCase(String methodName, Object... values) throws Exception {
 
 		Class<?>[] parameterTypes = new Class[values.length];
@@ -183,6 +212,7 @@ public class PartTreeJpaQueryIntegrationTests {
 	}
 
 	private JpaQueryMethod getQueryMethod(String methodName, Class<?>... parameterTypes) throws Exception {
+
 		Method method = UserRepository.class.getMethod(methodName, parameterTypes);
 		return new JpaQueryMethod(method, new DefaultRepositoryMetadata(UserRepository.class),
 				new SpelAwareProxyProjectionFactory(), PersistenceProvider.fromEntityManager(entityManager));
@@ -230,5 +260,11 @@ public class PartTreeJpaQueryIntegrationTests {
 		List<User> findByRolesIsNotEmpty();
 
 		List<User> findByFirstnameIsEmpty();
+
+		// should fail, since we can't compare scalar values to collections
+		List<User> findById(Collection<Long> ids);
+
+		// should fail, since we can't do an IN on a scalar
+		List<User> findByIdIn(Long id);
 	}
 }

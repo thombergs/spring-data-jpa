@@ -15,6 +15,7 @@
  */
 package org.springframework.data.jpa.repository.query;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -26,13 +27,17 @@ import javax.persistence.criteria.CriteriaQuery;
 
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.provider.PersistenceProvider;
+import org.springframework.data.jpa.repository.query.JpaParameters.JpaParameter;
 import org.springframework.data.jpa.repository.query.JpaQueryExecution.DeleteExecution;
 import org.springframework.data.jpa.repository.query.JpaQueryExecution.ExistsExecution;
 import org.springframework.data.jpa.repository.query.ParameterMetadataProvider.ParameterMetadata;
 import org.springframework.data.repository.query.ParametersParameterAccessor;
 import org.springframework.data.repository.query.ResultProcessor;
 import org.springframework.data.repository.query.ReturnedType;
+import org.springframework.data.repository.query.parser.Part;
+import org.springframework.data.repository.query.parser.Part.Type;
 import org.springframework.data.repository.query.parser.PartTree;
+import org.springframework.data.repository.query.parser.PartTree.OrPart;
 import org.springframework.lang.Nullable;
 
 /**
@@ -68,6 +73,8 @@ public class PartTreeJpaQuery extends AbstractJpaQuery {
 		Class<?> domainClass = method.getEntityInformation().getJavaType();
 		this.tree = new PartTree(method.getName(), domainClass);
 		this.parameters = method.getParameters();
+
+		validate(tree, parameters, method.toString());
 
 		boolean recreationRequired = parameters.hasDynamicProjection() || parameters.potentiallySortsDynamically();
 
@@ -108,6 +115,63 @@ public class PartTreeJpaQuery extends AbstractJpaQuery {
 		}
 
 		return super.getExecution();
+	}
+
+	private static void validate(PartTree tree, JpaParameters parameters, String methodName) {
+
+		int argCount = 0;
+
+		for (OrPart orPart : tree) {
+
+			for (Part part : orPart) {
+
+				Type type = part.getType();
+				int numberOfArguments = part.getNumberOfArguments();
+
+				for (int i = 0; i < numberOfArguments; i++) {
+
+					throwExceptionOnArgumentMismatch(methodName, type, parameters.getBindableParameter(argCount));
+
+					argCount++;
+				}
+			}
+		}
+	}
+
+	private static void throwExceptionOnArgumentMismatch(String methodName, Type type, JpaParameter parameter) {
+
+		if (expectsCollection(type) && !parameterIsCollectionLike(parameter)) {
+			throw new IllegalStateException(wrongParameterTypeMessage(methodName, type, "Collection", parameter));
+		} else if (!expectsCollection(type) && !parameterIsScalarLike(parameter)) {
+			throw new IllegalStateException(wrongParameterTypeMessage(methodName, type, "scalar", parameter));
+		}
+	}
+
+	private static String wrongParameterTypeMessage(String methodName, Type operatorType, String expectedArgumenType,
+			JpaParameter parameter) {
+
+		return String.format( //
+				"The operator %s requires a %s argument, but we found %s in method %s", //
+				expectedArgumenType, //
+				operatorType.name(), //
+				parameter.getType(), //
+				methodName //
+		);
+	}
+
+	private static boolean parameterIsCollectionLike(JpaParameter parameter) {
+		return Collection.class.isAssignableFrom(parameter.getType()) || parameter.getType().isArray();
+	}
+
+	/**
+	 * Arrays are may be treated as collection like or in the case of binary data as scalar
+	 */
+	private static boolean parameterIsScalarLike(JpaParameter parameter) {
+		return !Collection.class.isAssignableFrom(parameter.getType());
+	}
+
+	private static boolean expectsCollection(Type type) {
+		return type == Type.IN || type == Type.NOT_IN;
 	}
 
 	/**
