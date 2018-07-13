@@ -229,6 +229,16 @@ public class SimpleJpaQueryUnitTests {
 				.isThrownBy(() -> createJpaQuery(illegalMethod));
 	}
 
+	@Test // DATAJPA-1163
+	public void allowsEntityNamePlaceholderInExpression() throws Exception {
+
+		AbstractJpaQuery jpaQuery = createJpaQuery(
+						UserRepository.class.getMethod("findWithEntityNamePlaceholderInCountQuery", Pageable.class));
+
+		javax.persistence.Query query = jpaQuery.doCreateCountQuery(new Object[] { PageRequest.of(0, 10) });
+		System.out.println("foo");
+	}
+
 	private AbstractJpaQuery createJpaQuery(Method method) {
 
 		JpaQueryMethod queryMethod = new JpaQueryMethod(method, metadata, factory, extractor);
@@ -260,6 +270,7 @@ public class SimpleJpaQueryUnitTests {
 
 		@Query("select u from User u")
 		Collection<UserProjection> projectWithExplicitQuery();
+
 	}
 
 	interface UserProjection {}

@@ -30,6 +30,7 @@ import java.util.regex.Pattern;
 
 import org.springframework.data.domain.Range;
 import org.springframework.data.repository.query.parser.Part.Type;
+import org.springframework.expression.spel.standard.SpelExpressionParser;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.ObjectUtils;
@@ -103,10 +104,13 @@ class StringQuery implements DeclaredQuery {
 	 */
 	@Override
 	@SuppressWarnings("deprecation")
-	public DeclaredQuery deriveCountQuery(@Nullable String countQuery, @Nullable String countQueryProjection) {
-
-		return DeclaredQuery
-				.of(countQuery != null ? countQuery : QueryUtils.createCountQueryFor(query, countQueryProjection));
+	public DeclaredQuery deriveCountQuery(@Nullable String countQuery, @Nullable String countQueryProjection, JpaEntityMetadata metadata, SpelExpressionParser parser) {
+		if(countQuery != null){
+			return new ExpressionBasedStringQuery(countQuery, metadata, parser);
+		} else {
+			return DeclaredQuery
+							.of(QueryUtils.createCountQueryFor(query, countQueryProjection));
+		}
 	}
 
 	/*

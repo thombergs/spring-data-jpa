@@ -37,6 +37,7 @@ import org.springframework.data.projection.ProjectionFactory;
 import org.springframework.data.projection.SpelAwareProxyProjectionFactory;
 import org.springframework.data.repository.core.RepositoryMetadata;
 import org.springframework.data.repository.query.QueryCreationException;
+import org.springframework.expression.spel.standard.SpelExpressionParser;
 
 /**
  * Unit tests for {@link NamedQuery}.
@@ -46,6 +47,8 @@ import org.springframework.data.repository.query.QueryCreationException;
  */
 @RunWith(MockitoJUnitRunner.class)
 public class NamedQueryUnitTests {
+
+	private static final SpelExpressionParser PARSER = new SpelExpressionParser();
 
 	@Mock RepositoryMetadata metadata;
 	@Mock QueryExtractor extractor;
@@ -78,7 +81,7 @@ public class NamedQueryUnitTests {
 		JpaQueryMethod queryMethod = new JpaQueryMethod(method, metadata, projectionFactory, extractor);
 
 		when(em.createNamedQuery(queryMethod.getNamedCountQueryName())).thenThrow(new IllegalArgumentException());
-		NamedQuery.lookupFrom(queryMethod, em);
+		NamedQuery.lookupFrom(queryMethod, em, PARSER);
 	}
 
 	@Test // DATAJPA-142
@@ -90,7 +93,7 @@ public class NamedQueryUnitTests {
 
 		TypedQuery<Long> countQuery = mock(TypedQuery.class);
 		when(em.createNamedQuery(eq(queryMethod.getNamedCountQueryName()), eq(Long.class))).thenReturn(countQuery);
-		NamedQuery query = (NamedQuery) NamedQuery.lookupFrom(queryMethod, em);
+		NamedQuery query = (NamedQuery) NamedQuery.lookupFrom(queryMethod, em, PARSER);
 
 		query.doCreateCountQuery(new Object[1]);
 		verify(em, times(1)).createNamedQuery(queryMethod.getNamedCountQueryName(), Long.class);

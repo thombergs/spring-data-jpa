@@ -17,6 +17,8 @@ package org.springframework.data.jpa.repository.query;
 
 import java.util.List;
 
+import org.springframework.data.jpa.util.JpaMetamodel;
+import org.springframework.expression.spel.standard.SpelExpressionParser;
 import org.springframework.lang.Nullable;
 import org.springframework.util.StringUtils;
 
@@ -80,9 +82,11 @@ interface DeclaredQuery {
 	 * 
 	 * @param countQuery an optional query string to be used if present.
 	 * @param countQueryProjection an optional return type for the query.
+	 * @param metadata metadata about the entity used to replace SpEL expressions.
+	 * @param spelExpressionParser parser used to replace SpEK expressions.
 	 * @return a new {@literal DeclaredQuery} instance.
 	 */
-	DeclaredQuery deriveCountQuery(@Nullable String countQuery, @Nullable String countQueryProjection);
+	DeclaredQuery deriveCountQuery(@Nullable String countQuery, @Nullable String countQueryProjection, JpaEntityMetadata metadata, SpelExpressionParser spelExpressionParser);
 
 	/**
 	 * @return whether paging is implemented in the query itself, e.g. using SpEL expressions.

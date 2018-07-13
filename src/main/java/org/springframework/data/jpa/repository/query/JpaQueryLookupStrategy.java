@@ -29,6 +29,7 @@ import org.springframework.data.repository.query.QueryLookupStrategy;
 import org.springframework.data.repository.query.QueryLookupStrategy.Key;
 import org.springframework.data.repository.query.QueryMethodEvaluationContextProvider;
 import org.springframework.data.repository.query.RepositoryQuery;
+import org.springframework.expression.spel.standard.SpelExpressionParser;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
@@ -40,6 +41,8 @@ import org.springframework.util.Assert;
  * @author Mark Paluch
  */
 public final class JpaQueryLookupStrategy {
+
+	private static final SpelExpressionParser PARSER = new SpelExpressionParser();
 
 	/**
 	 * Private constructor to prevent instantiation.
@@ -154,7 +157,7 @@ public final class JpaQueryLookupStrategy {
 						evaluationContextProvider);
 			}
 
-			query = NamedQuery.lookupFrom(method, em);
+			query = NamedQuery.lookupFrom(method, em, PARSER);
 
 			if (null != query) {
 				return query;

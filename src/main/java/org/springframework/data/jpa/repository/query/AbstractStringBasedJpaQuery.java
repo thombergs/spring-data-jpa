@@ -63,7 +63,7 @@ abstract class AbstractStringBasedJpaQuery extends AbstractJpaQuery {
 
 		this.evaluationContextProvider = evaluationContextProvider;
 		this.query = new ExpressionBasedStringQuery(queryString, method.getEntityInformation(), parser);
-		this.countQuery = query.deriveCountQuery(method.getCountQuery(), method.getCountQueryProjection());
+		this.countQuery = query.deriveCountQuery(method.getCountQuery(), method.getCountQueryProjection(), method.getEntityInformation(), parser);
 
 		this.parser = parser;
 

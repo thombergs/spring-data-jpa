@@ -33,7 +33,9 @@ import org.springframework.data.repository.query.QueryCreationException;
 import org.springframework.data.repository.query.RepositoryQuery;
 import org.springframework.data.repository.query.ResultProcessor;
 import org.springframework.data.repository.query.ReturnedType;
+import org.springframework.expression.spel.standard.SpelExpressionParser;
 import org.springframework.lang.Nullable;
+import org.springframework.util.Assert;
 
 /**
  * Implementation of {@link RepositoryQuery} based on {@link javax.persistence.NamedQuery}s.
@@ -57,18 +59,22 @@ final class NamedQuery extends AbstractJpaQuery {
 	private final QueryExtractor extractor;
 	private final boolean namedCountQueryIsPresent;
 	private final DeclaredQuery declaredQuery;
+	private final SpelExpressionParser parser;
 
 	/**
 	 * Creates a new {@link NamedQuery}.
 	 */
-	private NamedQuery(JpaQueryMethod method, EntityManager em) {
+	private NamedQuery(JpaQueryMethod method, EntityManager em, SpelExpressionParser parser) {
 
 		super(method, em);
+
+		Assert.notNull(parser, "Parser must not be null or empty!");
 
 		this.queryName = method.getNamedQueryName();
 		this.countQueryName = method.getNamedCountQueryName();
 		this.extractor = method.getQueryExtractor();
 		this.countProjection = method.getCountQueryProjection();
+		this.parser = parser;
 
 		Parameters<?, ?> parameters = method.getParameters();
 
@@ -128,10 +134,11 @@ final class NamedQuery extends AbstractJpaQuery {
 	 *
 	 * @param method must not be {@literal null}.
 	 * @param em must not be {@literal null}.
+	 * @param parser must not be {@literal null}.
 	 * @return
 	 */
 	@Nullable
-	public static RepositoryQuery lookupFrom(JpaQueryMethod method, EntityManager em) {
+	public static RepositoryQuery lookupFrom(JpaQueryMethod method, EntityManager em, SpelExpressionParser parser) {
 
 		final String queryName = method.getNamedQueryName();
 
@@ -142,7 +149,7 @@ final class NamedQuery extends AbstractJpaQuery {
 		}
 
 		try {
-			RepositoryQuery query = new NamedQuery(method, em);
+			RepositoryQuery query = new NamedQuery(method, em, parser);
 			LOG.debug("Found named query {}!", queryName);
 			return query;
 		} catch (IllegalArgumentException e) {
@@ -186,7 +193,7 @@ final class NamedQuery extends AbstractJpaQuery {
 
 		} else {
 
-			String countQueryString = declaredQuery.deriveCountQuery(null, countProjection).getQueryString();
+			String countQueryString = declaredQuery.deriveCountQuery(null, countProjection, this.getQueryMethod().getEntityInformation(), parser).getQueryString();
 
 			countQuery = em.createQuery(countQueryString, Long.class);
 		}

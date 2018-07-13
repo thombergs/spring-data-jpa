@@ -18,6 +18,7 @@ package org.springframework.data.jpa.repository.query;
 import java.util.Collections;
 import java.util.List;
 
+import org.springframework.expression.spel.standard.SpelExpressionParser;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
@@ -93,7 +94,7 @@ class EmptyDeclaredQuery implements DeclaredQuery {
 	 * @see org.springframework.data.jpa.repository.query.DeclaredQuery#deriveCountQuery(java.lang.String, java.lang.String)
 	 */
 	@Override
-	public DeclaredQuery deriveCountQuery(@Nullable String countQuery, @Nullable String countQueryProjection) {
+	public DeclaredQuery deriveCountQuery(@Nullable String countQuery, @Nullable String countQueryProjection, JpaEntityMetadata metadata, SpelExpressionParser parser) {
 
 		Assert.hasText(countQuery, "CountQuery must not be empty!");
 
